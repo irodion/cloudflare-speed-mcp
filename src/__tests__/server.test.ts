@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2025 speed-cloudflare-mcp
+ * @license SPDX-License-Identifier: MIT
+ */
+
+/**
  * Tests for the SpeedCloudflareServer implementation
  */
 

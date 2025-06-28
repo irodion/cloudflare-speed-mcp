@@ -1,4 +1,10 @@
 /**
+ * MIT License
+ * Copyright (c) 2025 speed-cloudflare-mcp
+ * @license SPDX-License-Identifier: MIT
+ */
+
+/**
  * Core MCP server implementation with proper lifecycle management
  */
 
