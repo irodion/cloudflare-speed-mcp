@@ -1,0 +1,58 @@
+{
+  "mcpServers": {
+    "serena": {
+      "type": "stdio",
+      "command": "/Users/rodion/.local/bin/uv",
+      "args": [
+        "run",
+        "--directory",
+        "/Users/rodion/serena",
+        "serena-mcp-server",
+        "--context",
+        "ide-assistant"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "/usr/local/bin/npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {}
+    },
+    "gitmcp": {
+      "type": "stdio",
+      "command": "/Users/rodion/.local/bin/uvx",
+      "args": [
+        "mcp-server-git"
+      ],
+      "env": {}
+    },
+    "vetmcp": {
+      "type": "stdio",
+      "command": "/opt/podman/bin/podman",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "ghcr.io/safedep/vet:latest",
+        "-l",
+        "/tmp/vet-mcp.log",
+        "server",
+        "mcp"
+      ],
+      "env": {}
+    },
+    "brave": {
+      "type": "stdio",
+      "command": "/usr/local/bin/npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {}
+    }
+  }
+}
