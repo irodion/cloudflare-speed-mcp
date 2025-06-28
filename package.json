@@ -9,25 +9,33 @@
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "test": "jest",
+    "test:integration": "npm run build && node scripts/minimal-integration-test.js",
+    "test:integration:full": "npm run build && node scripts/integration-test.js",
+    "test:all": "RUN_INTEGRATION_TESTS=true jest",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.13.2",
-    "@cloudflare/speedtest": "^1.5.1"
+    "@cloudflare/speedtest": "^1.5.1",
+    "@modelcontextprotocol/sdk": "^1.13.2"
   },
   "devDependencies": {
+    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "prettier": "^3.0.0",
+    "eslint": "^8.0.0",
     "jest": "^29.0.0",
-    "@types/jest": "^29.0.0",
-    "ts-jest": "^29.0.0"
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
   },
-  "keywords": ["mcp", "cloudflare", "speed-test", "network"],
+  "keywords": [
+    "mcp",
+    "cloudflare",
+    "speed-test",
+    "network"
+  ],
   "author": "",
   "license": "MIT"
 }
