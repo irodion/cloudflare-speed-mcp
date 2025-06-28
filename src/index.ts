@@ -2,17 +2,32 @@
  * Main entry point for the speed-cloudflare-mcp server
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-
-const server = new McpServer({
-  name: 'speed-cloudflare-mcp',
-  version: '1.0.0',
-});
+import { SpeedCloudflareServer } from './server.js';
+import { logger } from './utils/logger.js';
 
 async function main(): Promise<void> {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  try {
+    const server = new SpeedCloudflareServer();
+    
+    // Add any custom shutdown handlers if needed
+    server.addShutdownHandler(async () => {
+      logger.info('Performing final cleanup...');
+      // Add any cleanup logic here
+    });
+
+    await server.start();
+    
+    logger.info('Server is running and waiting for connections...');
+    
+    // Keep the process alive
+    process.stdin.resume();
+  } catch (error) {
+    logger.error('Failed to start server', { error });
+    process.exit(1);
+  }
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  logger.error('Unhandled error in main', { error });
+  process.exit(1);
+});
