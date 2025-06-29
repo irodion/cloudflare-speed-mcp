@@ -8,7 +8,7 @@ import {
   SpeedTestConfig,
   SpeedTestMeasurement
 } from '../types/speedtest.js';
-import { HttpClient, TimeoutError, RetryError } from '../utils/http.js';
+import { HttpClient, TimeoutError } from '../utils/http.js';
 import { createApiConfig, ApiConfig } from '../config/api.js';
 import { logger } from '../utils/logger.js';
 
@@ -61,92 +61,109 @@ export class CloudflareSpeedTestClient {
     return error;
   }
 
-  private async executeSpeedTest(config: SpeedTestConfig): Promise<CloudflareResults> {
-    return new Promise((resolve, reject) => {
-      try {
-        const speedTest = new SpeedTest(config);
-        const timeout = setTimeout(() => {
-          reject(new TimeoutError(this.config.timeouts.SPEED_TEST));
-        }, this.config.timeouts.SPEED_TEST);
-
-        speedTest.onFinish = (results: CloudflareResults): void => {
-          clearTimeout(timeout);
-          this.logger.debug('Speed test completed', { 
-            summary: results.getSummary() 
-          });
-          resolve(results);
-        };
-
-        speedTest.onError = (error: string): void => {
-          clearTimeout(timeout);
-          this.logger.error('Speed test failed', { error });
-          reject(this.createSpeedTestError(
-            `Speed test execution failed: ${error}`,
-            'SPEED_TEST_EXECUTION_ERROR',
-            error,
-            true
-          ));
-        };
-
-      } catch (error) {
-        const err = error instanceof Error ? error : new Error(String(error));
-        reject(this.createSpeedTestError(
-          `Failed to initialize speed test: ${err.message}`,
-          'SPEED_TEST_INIT_ERROR',
-          err,
-          false
-        ));
-      }
-    });
-  }
-
-  async runSpeedTest(options: SpeedTestOptions = {}): Promise<CloudflareResults> {
-    this.checkRateLimit('speedTest');
-    
-    this.logger.info('Starting speed test', { options });
-
-    const config: SpeedTestConfig = {
-      ...this.config.speedTestConfig
-    };
-
-    if (options.type && options.type !== 'full') {
-      config.measurements = this.getTestMeasurements(options.type);
-    }
-
+  private async executeSpeedTest(config: SpeedTestConfig, timeoutMs?: number): Promise<CloudflareResults> {
+  return new Promise((resolve, reject) => {
     try {
-      const results = await this.httpClient.withRetry(async () => {
-        return this.executeSpeedTest(config);
-      });
+      const speedTest = new SpeedTest(config);
+      const effectiveTimeout = timeoutMs || this.config.timeouts.SPEED_TEST;
+      let isCompleted = false;
 
-      this.logger.info('Speed test completed successfully', { 
-        download: results.getDownloadBandwidth(),
-        upload: results.getUploadBandwidth(),
-        latency: results.getUnloadedLatency()
-      });
+      const timeout = setTimeout(() => {
+        isCompleted = true;
+        speedTest.onFinish = (): void => {};
+        speedTest.onError = (): void => {};
+        reject(new TimeoutError(effectiveTimeout));
+      }, effectiveTimeout);
 
-      return results;
-    } catch (error) {
-      if (error instanceof RetryError) {
-        throw this.createSpeedTestError(
-          `Speed test failed after ${error.message}`,
-          'SPEED_TEST_RETRY_EXHAUSTED',
-          error,
-          false
-        );
-      }
-      
-      if (error instanceof TimeoutError) {
-        throw this.createSpeedTestError(
-          `Speed test timed out after ${this.config.timeouts.SPEED_TEST}ms`,
-          'SPEED_TEST_TIMEOUT',
+      speedTest.onFinish = (results: CloudflareResults): void => {
+        if (isCompleted) return;
+        isCompleted = true;
+        clearTimeout(timeout);
+        this.logger.debug('Speed test completed', { 
+          summary: results.getSummary() 
+        });
+        resolve(results);
+      };
+
+      speedTest.onError = (error: string): void => {
+        if (isCompleted) return;
+        isCompleted = true;
+        clearTimeout(timeout);
+        this.logger.error('Speed test failed', { error });
+        reject(this.createSpeedTestError(
+          `Speed test execution failed: ${error}`,
+          'SPEED_TEST_EXECUTION_ERROR',
           error,
           true
-        );
+        ));
+      };
+
+      // If autoStart is false, we need to manually start the test
+      if (config.autoStart === false) {
+        speedTest.play();
       }
 
-      throw error;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      reject(this.createSpeedTestError(
+        `Failed to initialize speed test: ${err.message}`,
+        'SPEED_TEST_INIT_ERROR',
+        err,
+        false
+      ));
     }
+  });
+}
+
+  async runSpeedTest(options: SpeedTestOptions = {}): Promise<CloudflareResults> {
+  this.checkRateLimit('speedTest');
+  
+  // Validate timeout parameter if provided
+  if (options.timeout !== undefined && (typeof options.timeout !== 'number' || options.timeout <= 0)) {
+    throw this.createSpeedTestError(
+      'Timeout must be a positive number',
+      'INVALID_TIMEOUT_PARAMETER',
+      { timeout: options.timeout },
+      false
+    );
   }
+
+  this.logger.info('Starting speed test', { options });
+
+  const config: SpeedTestConfig = {
+    ...this.config.speedTestConfig
+  };
+
+  if (options.type && options.type !== 'full') {
+    config.measurements = this.getTestMeasurements(options.type);
+  }
+
+  try {
+    // Use options.timeout if provided, otherwise fall back to config timeout
+    const timeoutMs = options.timeout;
+    const results = await this.executeSpeedTest(config, timeoutMs);
+
+    this.logger.info('Speed test completed successfully', { 
+      download: results.getDownloadBandwidth(),
+      upload: results.getUploadBandwidth(),
+      latency: results.getUnloadedLatency()
+    });
+
+    return results;
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      const effectiveTimeout = options.timeout || this.config.timeouts.SPEED_TEST;
+      throw this.createSpeedTestError(
+        `Speed test timed out after ${effectiveTimeout}ms`,
+        'SPEED_TEST_TIMEOUT',
+        error,
+        true
+      );
+    }
+
+    throw error;
+  }
+}
 
   private getTestMeasurements(type: SpeedTestType): SpeedTestMeasurement[] {
     const baseMeasurements = [

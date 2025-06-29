@@ -14,14 +14,15 @@ global.fetch = jest.fn();
 
 describe('CloudflareSpeedTestClient', () => {
   let client: CloudflareSpeedTestClient;
-  let mockSpeedTest: { onFinish: jest.Mock; onError: jest.Mock };
+  let mockSpeedTest: { onFinish: jest.Mock; onError: jest.Mock; play: jest.Mock };
   let mockFetch: jest.MockedFunction<typeof fetch>;
 
   beforeEach(() => {
     mockFetch = jest.mocked(fetch);
     mockSpeedTest = {
       onFinish: jest.fn(),
-      onError: jest.fn()
+      onError: jest.fn(),
+      play: jest.fn()
     };
     
     const SpeedTest = require('@cloudflare/speedtest').default;
