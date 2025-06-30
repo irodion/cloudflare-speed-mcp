@@ -25,6 +25,46 @@ export const DEFAULT_RATE_LIMITS: Record<OperationType, RateLimitConfig> = {
     maxDailyRequests: 500,
     maxConcurrentRequests: 3,
   },
+  [OperationType.LATENCY_TEST]: {
+    operationType: OperationType.LATENCY_TEST,
+    tokensPerInterval: 10,
+    intervalMs: 60_000, // 1 minute
+    maxBucketSize: 15,
+    maxDailyRequests: 500,
+    maxConcurrentRequests: 3,
+  },
+  [OperationType.DOWNLOAD_TEST]: {
+    operationType: OperationType.DOWNLOAD_TEST,
+    tokensPerInterval: 2,
+    intervalMs: 120_000, // 2 minutes
+    maxBucketSize: 3,
+    maxDailyRequests: 100,
+    maxConcurrentRequests: 2,
+  },
+  [OperationType.UPLOAD_TEST]: {
+    operationType: OperationType.UPLOAD_TEST,
+    tokensPerInterval: 2,
+    intervalMs: 120_000, // 2 minutes
+    maxBucketSize: 3,
+    maxDailyRequests: 100,
+    maxConcurrentRequests: 2,
+  },
+  [OperationType.PACKET_LOSS_TEST]: {
+    operationType: OperationType.PACKET_LOSS_TEST,
+    tokensPerInterval: 5,
+    intervalMs: 90_000, // 1.5 minutes
+    maxBucketSize: 8,
+    maxDailyRequests: 200,
+    maxConcurrentRequests: 2,
+  },
+  [OperationType.CONNECTION_INFO]: {
+    operationType: OperationType.CONNECTION_INFO,
+    tokensPerInterval: 20,
+    intervalMs: 60_000, // 1 minute
+    maxBucketSize: 30,
+    maxDailyRequests: 1000,
+    maxConcurrentRequests: 5,
+  },
 };
 
 export const DEFAULT_BACKOFF_CONFIG: RateLimitBackoffConfig = {
@@ -35,7 +75,7 @@ export const DEFAULT_BACKOFF_CONFIG: RateLimitBackoffConfig = {
 };
 
 export function getRateLimitConfig(operationType: OperationType): RateLimitConfig {
-  const envPrefix = `RATE_LIMIT_${operationType.toUpperCase()}`;
+  const envPrefix = `RATE_LIMIT_${camelToScreamingSnakeCase(operationType)}`;
   const defaultConfig = DEFAULT_RATE_LIMITS[operationType];
 
   return {
@@ -78,7 +118,7 @@ export function getBackoffConfig(): RateLimitBackoffConfig {
     maxDelayMs: getEnvInteger(
       'RATE_LIMIT_BACKOFF_MAX_DELAY_MS', 
       DEFAULT_BACKOFF_CONFIG.maxDelayMs,
-      10 * 60 * 1000 // Max 10 minutes
+      600000 // Max 10 minutes
     ),
     backoffMultiplier: getEnvNumber(
       'RATE_LIMIT_BACKOFF_MULTIPLIER', 
@@ -105,11 +145,20 @@ function parseEnvValue<T>(
   }
 
   const parsed = parser(value);
-  if (isNaN(parsed as number) || (parsed as number) < 0 || (maxValue !== undefined && (parsed as number) > (maxValue as number))) {
-    const reason = isNaN(parsed as number) ? 'not a number' :
-                   (parsed as number) < 0 ? 'negative value' :
-                   'exceeds maximum allowed value';
-    console.warn(`Invalid value for ${envVar}: ${value} (${reason}). Using default: ${defaultValue}`);
+  const numValue = parsed as number;
+  
+  if (isNaN(numValue)) {
+    console.warn(`${envVar}: ${value} (not a number)`);
+    return defaultValue;
+  }
+  
+  if (numValue < 0) {
+    console.warn(`${envVar}: ${value} (negative value)`);
+    return defaultValue;
+  }
+  
+  if (maxValue !== undefined && numValue > (maxValue as number)) {
+    console.warn(`${envVar}: ${value} (exceeds maximum allowed value)`);
     return defaultValue;
   }
 
@@ -122,4 +171,8 @@ function getEnvInteger(envVar: string, defaultValue: number, maxValue?: number):
 
 function getEnvNumber(envVar: string, defaultValue: number, maxValue?: number): number {
   return parseEnvValue(envVar, defaultValue, parseFloat, maxValue);
+}
+
+function camelToScreamingSnakeCase(str: string): string {
+  return str.replace(/([A-Z])/g, '_$1').toUpperCase();
 }

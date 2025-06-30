@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Packet Loss Test Parameters",
+  "description": "Parameters for running a packet loss test",
+  "properties": {
+    "timeout": {
+      "type": "number",
+      "description": "Test timeout in seconds",
+      "minimum": 1,
+      "maximum": 300,
+      "default": 60
+    },
+    "serverLocation": {
+      "type": "string",
+      "description": "Optional server location identifier",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "packetCount": {
+      "type": "number",
+      "description": "Total number of packets to send",
+      "minimum": 10,
+      "maximum": 1000,
+      "default": 100
+    },
+    "batchSize": {
+      "type": "number",
+      "description": "Number of packets per batch",
+      "minimum": 1,
+      "maximum": 50,
+      "default": 10
+    },
+    "batchWaitTime": {
+      "type": "number",
+      "description": "Wait time between batches in milliseconds",
+      "minimum": 100,
+      "maximum": 5000,
+      "default": 1000
+    }
+  },
+  "additionalProperties": false
+}
