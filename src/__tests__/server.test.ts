@@ -8,6 +8,16 @@
  * Tests for the SpeedCloudflareServer implementation
  */
 
+// Mock the Cloudflare speedtest module
+jest.mock('@cloudflare/speedtest', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    download: jest.fn().mockResolvedValue({ download: 100 }),
+    upload: jest.fn().mockResolvedValue({ upload: 50 }),
+    ping: jest.fn().mockResolvedValue({ latency: 15 }),
+  })),
+}));
+
 import { SpeedCloudflareServer } from '../server.js';
 import { LogLevel } from '../types/mcp.js';
 

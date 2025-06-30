@@ -1,7 +1,12 @@
 export enum OperationType {
-  SPEED_TEST = 'speed_test',
+  SPEED_TEST = 'speedTest',
   PING = 'ping',
-  TRACEROUTE = 'traceroute'
+  TRACEROUTE = 'traceroute',
+  LATENCY_TEST = 'latencyTest',
+  DOWNLOAD_TEST = 'downloadTest',
+  UPLOAD_TEST = 'uploadTest',
+  PACKET_LOSS_TEST = 'packetLossTest',
+  CONNECTION_INFO = 'connectionInfo'
 }
 
 export interface RateLimitConfig {

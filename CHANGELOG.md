@@ -4,6 +4,53 @@ All notable changes to the speed-cloudflare-mcp project will be documented in th
 
 ## [Unreleased]
 
+**Speed Test MCP Tools Implementation Complete (Task 005)** - Granular MCP tools for targeted network diagnostics
+- Six specialized MCP tools for granular speed testing control
+- Individual tools: test_latency, test_download_speed, test_upload_speed, test_packet_loss
+- Comprehensive tool: run_speed_test with configurable test combinations  
+- Utility tool: get_connection_info for network information
+- Base tool architecture with shared functionality (rate limiting, validation, error handling)
+- Tool registry system for automatic MCP server registration and execution
+- JSON schema validation for all tool inputs with comprehensive parameter support
+- Standardized result formatting across all tools with execution metadata
+- Complete unit test suite for tool validation and error handling
+
+### Technical Implementation Details (Task 005)
+- **Granular Tool Architecture**: Multiple focused tools instead of monolithic approach
+  - `test_latency`: Ping/latency measurement with configurable packet count
+  - `test_download_speed`: Download bandwidth testing with duration/byte controls
+  - `test_upload_speed`: Upload bandwidth testing with duration/byte controls
+  - `test_packet_loss`: Packet loss measurement with batch configuration
+  - `run_speed_test`: Comprehensive testing with configurable test type combinations
+  - `get_connection_info`: Connection details including IP, ISP, and location data
+- **Base Tool Pattern**: Inheritance-based architecture for code reuse
+  - Shared validation, rate limiting, timeout management, and error handling
+  - Consistent result formatting and response structure across all tools
+  - Tool-specific rate limiting keys for granular control
+- **MCP Server Integration**: Full integration with existing server infrastructure
+  - Automatic tool registration with ListToolsRequestSchema and CallToolRequestSchema handlers
+  - Tool registry for centralized management and execution
+  - Error handling with structured responses and proper error codes
+- **JSON Schema Validation**: Comprehensive input validation for all tools
+  - Individual schema files for each tool with parameter-specific validation
+  - Common parameters (timeout, serverLocation) with tool-specific extensions
+  - Range validation, enum constraints, and type checking
+
+### Files Created/Modified (Task 005)
+- `src/tools/base-tool.ts` - Base tool class with common functionality
+- `src/tools/latency-test.ts` - Latency testing tool implementation
+- `src/tools/download-test.ts` - Download speed testing tool
+- `src/tools/upload-test.ts` - Upload speed testing tool
+- `src/tools/packet-loss-test.ts` - Packet loss testing tool
+- `src/tools/speed-test.ts` - Comprehensive speed test tool
+- `src/tools/connection-info.ts` - Connection information tool
+- `src/tools/index.ts` - Tool registry and exports
+- `src/types/tools.ts` - Tool-related type definitions
+- `src/schemas/tools/*.json` - JSON schemas for all tools
+- `src/server.ts` - Updated MCP server with tool integration
+- `src/__tests__/tools/` - Comprehensive unit test suite
+- `docs/2-implementation/speed-test-tools/` - Feature documentation and task tracking
+
 **Rate Limiting System Implementation Complete (Task 004)** - Comprehensive rate limiting with token bucket algorithm and concurrent operation management
 - Token bucket rate limiter with configurable limits per operation type
 - Daily usage tracking with automatic reset at midnight

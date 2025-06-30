@@ -13,6 +13,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerConfig, ServerState, McpError } from './types/mcp.js';
 import { createServerConfig, getServerCapabilities } from './config/server.js';
 import { logger } from './utils/logger.js';
+import { RateLimiter } from './services/rate-limiter.js';
+import { CloudflareSpeedTestClient } from './clients/cloudflare.js';
+import { ToolRegistry } from './tools/index.js';
 
 export class SpeedCloudflareServer {
   private mcpServer: McpServer;
@@ -20,6 +23,9 @@ export class SpeedCloudflareServer {
   private config: ServerConfig;
   private state: ServerState;
   private shutdownHandlers: (() => Promise<void>)[] = [];
+  private rateLimiter: RateLimiter;
+  private cloudflareClient: CloudflareSpeedTestClient;
+  private toolRegistry: ToolRegistry;
 
   constructor(config?: Partial<ServerConfig>) {
     this.config = { ...createServerConfig(), ...config };
@@ -32,11 +38,17 @@ export class SpeedCloudflareServer {
 
     logger.setLevel(this.config.logLevel!);
 
+    // Initialize services
+    this.rateLimiter = new RateLimiter();
+    this.cloudflareClient = new CloudflareSpeedTestClient();
+    this.toolRegistry = new ToolRegistry(this.rateLimiter, this.cloudflareClient);
+
     this.mcpServer = new McpServer({
       name: this.config.name,
       version: this.config.version,
     });
 
+    this.setupToolHandlers();
     this.setupEventHandlers();
     this.setupSignalHandlers();
 
@@ -113,6 +125,64 @@ export class SpeedCloudflareServer {
 
   addShutdownHandler(handler: () => Promise<void>): void {
     this.shutdownHandlers.push(handler);
+  }
+
+  private setupToolHandlers(): void {
+    // Register all tools with the MCP server
+    const tools = this.toolRegistry.getAllTools();
+    
+    for (const tool of tools) {
+      const toolName = tool.getToolName();
+      const description = tool.getDescription();
+      const inputSchema = tool.getInputSchema();
+      
+      this.mcpServer.tool(
+        toolName,
+        inputSchema,
+        async (args: Record<string, unknown>) => {
+          logger.debug('Tool execution requested', { 
+            toolName,
+            args
+          });
+
+          try {
+            const result = await tool.execute({
+              name: toolName,
+              arguments: args
+            });
+            return {
+              content: result.content,
+              isError: result.isError
+            };
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error('Tool execution failed', { 
+              toolName, 
+              error: errorMessage 
+            });
+            
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  success: false,
+                  error: {
+                    code: 'TOOL_EXECUTION_ERROR',
+                    message: errorMessage
+                  },
+                  timestamp: new Date().toISOString()
+                }, null, 2)
+              }],
+              isError: true
+            };
+          }
+        }
+      );
+    }
+
+    logger.debug('Tool handlers setup completed', {
+      toolCount: tools.length
+    });
   }
 
   private setupEventHandlers(): void {
