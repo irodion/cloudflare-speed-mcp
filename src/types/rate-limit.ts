@@ -6,7 +6,7 @@ export enum OperationType {
   DOWNLOAD_TEST = 'downloadTest',
   UPLOAD_TEST = 'uploadTest',
   PACKET_LOSS_TEST = 'packetLossTest',
-  CONNECTION_INFO = 'connectionInfo'
+  CONNECTION_INFO = 'connectionInfo',
 }
 
 export interface RateLimitConfig {

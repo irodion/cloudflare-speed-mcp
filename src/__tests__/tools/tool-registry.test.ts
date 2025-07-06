@@ -34,7 +34,7 @@ describe('ToolRegistry', () => {
   describe('Tool Registration', () => {
     test('should register all expected tools', () => {
       const tools = registry.getAllTools();
-      expect(tools).toHaveLength(6);
+      expect(tools).toHaveLength(7);
 
       const toolNames = tools.map(tool => tool.getToolName());
       expect(toolNames).toContain('test_latency');
@@ -43,6 +43,7 @@ describe('ToolRegistry', () => {
       expect(toolNames).toContain('test_packet_loss');
       expect(toolNames).toContain('run_speed_test');
       expect(toolNames).toContain('get_connection_info');
+      expect(toolNames).toContain('get_server_info');
     });
 
     test('should retrieve specific tools by name', () => {
@@ -58,7 +59,7 @@ describe('ToolRegistry', () => {
   describe('Tool Definitions', () => {
     test('should return tool definitions for MCP registration', () => {
       const definitions = registry.getToolDefinitions();
-      expect(definitions).toHaveLength(6);
+      expect(definitions).toHaveLength(7);
 
       const latencyDef = definitions.find(def => def.name === 'test_latency');
       expect(latencyDef).toBeDefined();
@@ -127,8 +128,8 @@ describe('ToolRegistry', () => {
       const tools = registry.getAllTools();
 
       for (const tool of tools) {
-        // Skip connection info tool as it doesn't need timeout
-        if (tool.getToolName() === 'get_connection_info') continue;
+        // Skip connection info and server info tools as they don't need timeout
+        if (tool.getToolName() === 'get_connection_info' || tool.getToolName() === 'get_server_info') continue;
 
         const schema = tool.getInputSchema();
         expect(schema.properties).toHaveProperty('timeout');

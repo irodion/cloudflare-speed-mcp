@@ -4,7 +4,7 @@ import { RetryConfig } from '../utils/http.js';
 export const API_TIMEOUTS = {
   DEFAULT: 60000,
   SPEED_TEST: 120000,
-  CONNECTION_INFO: 30000
+  CONNECTION_INFO: 30000,
 } as const;
 
 export const DEFAULT_MEASUREMENTS: SpeedTestMeasurement[] = [
@@ -22,12 +22,12 @@ export const DEFAULT_MEASUREMENTS: SpeedTestMeasurement[] = [
   { type: 'upload', bytes: 2.5e7, count: 4 },
   { type: 'download', bytes: 1e8, count: 3 },
   { type: 'upload', bytes: 5e7, count: 3 },
-  { type: 'download', bytes: 2.5e8, count: 2 }
+  { type: 'download', bytes: 2.5e8, count: 2 },
 ];
 
 export const DEFAULT_SPEED_TEST_CONFIG: SpeedTestConfig = {
   measurements: DEFAULT_MEASUREMENTS,
-  autoStart: false
+  autoStart: false,
 };
 
 export const API_RETRY_CONFIG: RetryConfig = {
@@ -37,18 +37,18 @@ export const API_RETRY_CONFIG: RetryConfig = {
   exponentialBackoff: true,
   retryableErrors: [
     'ECONNRESET',
-    'ETIMEDOUT', 
+    'ETIMEDOUT',
     'ENOTFOUND',
     'ECONNREFUSED',
     'NETWORK_ERROR',
-    'TIMEOUT_ERROR'
-  ]
+    'TIMEOUT_ERROR',
+  ],
 };
 
 export const RATE_LIMITS = {
   REQUESTS_PER_MINUTE: 10,
   SPEED_TESTS_PER_HOUR: 5,
-  BURST_LIMIT: 3
+  BURST_LIMIT: 3,
 } as const;
 
 export interface ApiConfig {
@@ -63,8 +63,11 @@ export function createApiConfig(overrides: Partial<ApiConfig> = {}): ApiConfig {
   return {
     timeouts: { ...API_TIMEOUTS, ...overrides.timeouts },
     retryConfig: { ...API_RETRY_CONFIG, ...overrides.retryConfig },
-    speedTestConfig: { ...DEFAULT_SPEED_TEST_CONFIG, ...overrides.speedTestConfig },
+    speedTestConfig: {
+      ...DEFAULT_SPEED_TEST_CONFIG,
+      ...overrides.speedTestConfig,
+    },
     rateLimits: { ...RATE_LIMITS, ...overrides.rateLimits },
-    userAgent: overrides.userAgent || 'speed-cloudflare-mcp/1.0.0'
+    userAgent: overrides.userAgent || 'speed-cloudflare-mcp/1.0.0',
   };
 }

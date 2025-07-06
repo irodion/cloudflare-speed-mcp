@@ -1,12 +1,12 @@
 import SpeedTest, { Results as CloudflareResults } from '@cloudflare/speedtest';
-import { 
-  SpeedTestOptions, 
-  SpeedTestError, 
-  ConnectionInfo, 
+import {
+  SpeedTestOptions,
+  SpeedTestError,
+  ConnectionInfo,
   ServerLocation,
   SpeedTestType,
   SpeedTestConfig,
-  SpeedTestMeasurement
+  SpeedTestMeasurement,
 } from '../types/speedtest.js';
 import { HttpClient, TimeoutError } from '../utils/http.js';
 import { createApiConfig, ApiConfig } from '../config/api.js';
@@ -29,21 +29,27 @@ export class CloudflareSpeedTestClient {
   private checkRateLimit(operation: string): void {
     const now = Date.now();
     const windowMs = operation === 'speedTest' ? 3600000 : 60000; // 1 hour for speed tests, 1 minute for others
-    const limit = operation === 'speedTest' 
-      ? this.config.rateLimits.SPEED_TESTS_PER_HOUR 
-      : this.config.rateLimits.REQUESTS_PER_MINUTE;
+    const limit =
+      operation === 'speedTest'
+        ? this.config.rateLimits.SPEED_TESTS_PER_HOUR
+        : this.config.rateLimits.REQUESTS_PER_MINUTE;
 
     const key = `${operation}:${Math.floor(now / windowMs)}`;
     const requests = this.rateLimitMap.get(key) || [];
-    
-    const validRequests = requests.filter(time => now - time < windowMs);
-    
+
+    const validRequests = requests.filter((time) => now - time < windowMs);
+
     if (validRequests.length >= limit) {
-      const error: SpeedTestError = Object.assign(new Error(`Rate limit exceeded for ${operation}. Limit: ${limit} per ${windowMs / 1000}s`), {
-        name: 'SpeedTestError' as const,
-        code: 'RATE_LIMIT_EXCEEDED',
-        retryable: false
-      });
+      const error: SpeedTestError = Object.assign(
+        new Error(
+          `Rate limit exceeded for ${operation}. Limit: ${limit} per ${windowMs / 1000}s`
+        ),
+        {
+          name: 'SpeedTestError' as const,
+          code: 'RATE_LIMIT_EXCEEDED',
+          retryable: false,
+        }
+      );
       throw error;
     }
 
@@ -51,124 +57,139 @@ export class CloudflareSpeedTestClient {
     this.rateLimitMap.set(key, validRequests);
   }
 
-  private createSpeedTestError(message: string, code: string, details?: unknown, retryable = false): SpeedTestError {
+  private createSpeedTestError(
+    message: string,
+    code: string,
+    details?: unknown,
+    retryable = false
+  ): SpeedTestError {
     const error: SpeedTestError = Object.assign(new Error(message), {
       name: 'SpeedTestError' as const,
       code,
       details,
-      retryable
+      retryable,
     });
     return error;
   }
 
-  private async executeSpeedTest(config: SpeedTestConfig, timeoutMs?: number): Promise<CloudflareResults> {
-  return new Promise((resolve, reject) => {
-    try {
-      const speedTest = new SpeedTest(config);
-      const effectiveTimeout = timeoutMs || this.config.timeouts.SPEED_TEST;
-      let isCompleted = false;
+  private async executeSpeedTest(
+    config: SpeedTestConfig,
+    timeoutMs?: number
+  ): Promise<CloudflareResults> {
+    return new Promise((resolve, reject) => {
+      try {
+        const speedTest = new SpeedTest(config);
+        const effectiveTimeout = timeoutMs || this.config.timeouts.SPEED_TEST;
+        let isCompleted = false;
 
-      const timeout = setTimeout(() => {
-        isCompleted = true;
-        speedTest.onFinish = (): void => {};
-        speedTest.onError = (): void => {};
-        reject(new TimeoutError(effectiveTimeout));
-      }, effectiveTimeout);
+        const timeout = setTimeout(() => {
+          isCompleted = true;
+          speedTest.onFinish = (): void => {};
+          speedTest.onError = (): void => {};
+          reject(new TimeoutError(effectiveTimeout));
+        }, effectiveTimeout);
 
-      speedTest.onFinish = (results: CloudflareResults): void => {
-        if (isCompleted) return;
-        isCompleted = true;
-        clearTimeout(timeout);
-        this.logger.debug('Speed test completed', { 
-          summary: results.getSummary() 
-        });
-        resolve(results);
-      };
+        speedTest.onFinish = (results: CloudflareResults): void => {
+          if (isCompleted) return;
+          isCompleted = true;
+          clearTimeout(timeout);
+          this.logger.debug('Speed test completed', {
+            summary: results.getSummary(),
+          });
+          resolve(results);
+        };
 
-      speedTest.onError = (error: string): void => {
-        if (isCompleted) return;
-        isCompleted = true;
-        clearTimeout(timeout);
-        this.logger.error('Speed test failed', { error });
-        reject(this.createSpeedTestError(
-          `Speed test execution failed: ${error}`,
-          'SPEED_TEST_EXECUTION_ERROR',
-          error,
-          true
-        ));
-      };
+        speedTest.onError = (error: string): void => {
+          if (isCompleted) return;
+          isCompleted = true;
+          clearTimeout(timeout);
+          this.logger.error('Speed test failed', { error });
+          reject(
+            this.createSpeedTestError(
+              `Speed test execution failed: ${error}`,
+              'SPEED_TEST_EXECUTION_ERROR',
+              error,
+              true
+            )
+          );
+        };
 
-      // If autoStart is false, we need to manually start the test
-      if (config.autoStart === false) {
-        speedTest.play();
+        // If autoStart is false, we need to manually start the test
+        if (config.autoStart === false) {
+          speedTest.play();
+        }
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        reject(
+          this.createSpeedTestError(
+            `Failed to initialize speed test: ${err.message}`,
+            'SPEED_TEST_INIT_ERROR',
+            err,
+            false
+          )
+        );
       }
-
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      reject(this.createSpeedTestError(
-        `Failed to initialize speed test: ${err.message}`,
-        'SPEED_TEST_INIT_ERROR',
-        err,
-        false
-      ));
-    }
-  });
-}
-
-  async runSpeedTest(options: SpeedTestOptions = {}): Promise<CloudflareResults> {
-  this.checkRateLimit('speedTest');
-  
-  // Validate timeout parameter if provided
-  if (options.timeout !== undefined && (typeof options.timeout !== 'number' || options.timeout <= 0)) {
-    throw this.createSpeedTestError(
-      'Timeout must be a positive number',
-      'INVALID_TIMEOUT_PARAMETER',
-      { timeout: options.timeout },
-      false
-    );
-  }
-
-  this.logger.info('Starting speed test', { options });
-
-  const config: SpeedTestConfig = {
-    ...this.config.speedTestConfig
-  };
-
-  if (options.type && options.type !== 'full') {
-    config.measurements = this.getTestMeasurements(options.type);
-  }
-
-  try {
-    // Use options.timeout if provided, otherwise fall back to config timeout
-    const timeoutMs = options.timeout;
-    const results = await this.executeSpeedTest(config, timeoutMs);
-
-    this.logger.info('Speed test completed successfully', { 
-      download: results.getDownloadBandwidth(),
-      upload: results.getUploadBandwidth(),
-      latency: results.getUnloadedLatency()
     });
+  }
 
-    return results;
-  } catch (error) {
-    if (error instanceof TimeoutError) {
-      const effectiveTimeout = options.timeout || this.config.timeouts.SPEED_TEST;
+  async runSpeedTest(
+    options: SpeedTestOptions = {}
+  ): Promise<CloudflareResults> {
+    this.checkRateLimit('speedTest');
+
+    // Validate timeout parameter if provided
+    if (
+      options.timeout !== undefined &&
+      (typeof options.timeout !== 'number' || options.timeout <= 0)
+    ) {
       throw this.createSpeedTestError(
-        `Speed test timed out after ${effectiveTimeout}ms`,
-        'SPEED_TEST_TIMEOUT',
-        error,
-        true
+        'Timeout must be a positive number',
+        'INVALID_TIMEOUT_PARAMETER',
+        { timeout: options.timeout },
+        false
       );
     }
 
-    throw error;
+    this.logger.info('Starting speed test', { options });
+
+    const config: SpeedTestConfig = {
+      ...this.config.speedTestConfig,
+    };
+
+    if (options.type && options.type !== 'full') {
+      config.measurements = this.getTestMeasurements(options.type);
+    }
+
+    try {
+      // Use options.timeout if provided, otherwise fall back to config timeout
+      const timeoutMs = options.timeout;
+      const results = await this.executeSpeedTest(config, timeoutMs);
+
+      this.logger.info('Speed test completed successfully', {
+        download: results.getDownloadBandwidth(),
+        upload: results.getUploadBandwidth(),
+        latency: results.getUnloadedLatency(),
+      });
+
+      return results;
+    } catch (error) {
+      if (error instanceof TimeoutError) {
+        const effectiveTimeout =
+          options.timeout || this.config.timeouts.SPEED_TEST;
+        throw this.createSpeedTestError(
+          `Speed test timed out after ${effectiveTimeout}ms`,
+          'SPEED_TEST_TIMEOUT',
+          error,
+          true
+        );
+      }
+
+      throw error;
+    }
   }
-}
 
   private getTestMeasurements(type: SpeedTestType): SpeedTestMeasurement[] {
-    const baseMeasurements = [
-      { type: 'latency' as const, numPackets: 20 }
-    ];
+    const baseMeasurements = [{ type: 'latency' as const, numPackets: 20 }];
 
     switch (type) {
       case 'latency':
@@ -177,18 +198,22 @@ export class CloudflareSpeedTestClient {
         return [
           ...baseMeasurements,
           { type: 'download' as const, bytes: 1e6, count: 5 },
-          { type: 'download' as const, bytes: 1e7, count: 3 }
+          { type: 'download' as const, bytes: 1e7, count: 3 },
         ];
       case 'upload':
         return [
           ...baseMeasurements,
           { type: 'upload' as const, bytes: 1e6, count: 5 },
-          { type: 'upload' as const, bytes: 1e7, count: 3 }
+          { type: 'upload' as const, bytes: 1e7, count: 3 },
         ];
       case 'packetLoss':
         return [
           ...baseMeasurements,
-          { type: 'packetLoss' as const, numPackets: 1000, responsesWaitTime: 3000 }
+          {
+            type: 'packetLoss' as const,
+            numPackets: 1000,
+            responsesWaitTime: 3000,
+          },
         ];
       default:
         return this.config.speedTestConfig.measurements || [];
@@ -197,7 +222,7 @@ export class CloudflareSpeedTestClient {
 
   async getConnectionInfo(): Promise<ConnectionInfo> {
     this.checkRateLimit('connectionInfo');
-    
+
     try {
       const response = await this.httpClient.withTimeout(
         this.httpClient.fetch('https://1.1.1.1/cdn-cgi/trace'),
@@ -205,29 +230,44 @@ export class CloudflareSpeedTestClient {
       );
 
       if (!response.ok) {
-        const error: SpeedTestError = Object.assign(new Error(`Connection info request failed: ${response.status} ${response.statusText}`), {
-          name: 'SpeedTestError' as const,
-          code: 'CONNECTION_INFO_ERROR',
-          details: { status: response.status, statusText: response.statusText },
-          retryable: response.status >= 500
-        });
+        const error: SpeedTestError = Object.assign(
+          new Error(
+            `Connection info request failed: ${response.status} ${response.statusText}`
+          ),
+          {
+            name: 'SpeedTestError' as const,
+            code: 'CONNECTION_INFO_ERROR',
+            details: {
+              status: response.status,
+              statusText: response.statusText,
+            },
+            retryable: response.status >= 500,
+          }
+        );
         throw error;
       }
 
       const text = await response.text();
       return this.parseConnectionInfo(text);
     } catch (error) {
-      if (error instanceof Error && 'code' in error && error.name === 'SpeedTestError') {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        error.name === 'SpeedTestError'
+      ) {
         throw error;
       }
 
       const err = error instanceof Error ? error : new Error(String(error));
-      const speedTestError: SpeedTestError = Object.assign(new Error(`Failed to get connection info: ${err.message}`), {
-        name: 'SpeedTestError' as const,
-        code: 'CONNECTION_INFO_NETWORK_ERROR',
-        details: err,
-        retryable: true
-      });
+      const speedTestError: SpeedTestError = Object.assign(
+        new Error(`Failed to get connection info: ${err.message}`),
+        {
+          name: 'SpeedTestError' as const,
+          code: 'CONNECTION_INFO_NETWORK_ERROR',
+          details: err,
+          retryable: true,
+        }
+      );
       throw speedTestError;
     }
   }
@@ -245,17 +285,17 @@ export class CloudflareSpeedTestClient {
 
     return {
       ip: data.ip || 'unknown',
-      isp: data.isp || 'unknown', 
+      isp: data.isp || 'unknown',
       country: data.loc || 'unknown',
       region: data.region || 'unknown',
       city: data.city || 'unknown',
-      timezone: data.timezone || 'unknown'
+      timezone: data.timezone || 'unknown',
     };
   }
 
   async discoverServers(): Promise<ServerLocation[]> {
     this.checkRateLimit('serverDiscovery');
-    
+
     try {
       const response = await this.httpClient.withTimeout(
         this.httpClient.fetch('https://speed.cloudflare.com/locations'),
@@ -263,29 +303,44 @@ export class CloudflareSpeedTestClient {
       );
 
       if (!response.ok) {
-        const error: SpeedTestError = Object.assign(new Error(`Server discovery failed: ${response.status} ${response.statusText}`), {
-          name: 'SpeedTestError' as const,
-          code: 'SERVER_DISCOVERY_ERROR',
-          details: { status: response.status, statusText: response.statusText },
-          retryable: response.status >= 500
-        });
+        const error: SpeedTestError = Object.assign(
+          new Error(
+            `Server discovery failed: ${response.status} ${response.statusText}`
+          ),
+          {
+            name: 'SpeedTestError' as const,
+            code: 'SERVER_DISCOVERY_ERROR',
+            details: {
+              status: response.status,
+              statusText: response.statusText,
+            },
+            retryable: response.status >= 500,
+          }
+        );
         throw error;
       }
 
       const servers = await response.json();
       return this.parseServerLocations(servers);
     } catch (error) {
-      if (error instanceof Error && 'code' in error && error.name === 'SpeedTestError') {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        error.name === 'SpeedTestError'
+      ) {
         throw error;
       }
 
       const err = error instanceof Error ? error : new Error(String(error));
-      const speedTestError: SpeedTestError = Object.assign(new Error(`Failed to discover servers: ${err.message}`), {
-        name: 'SpeedTestError' as const,
-        code: 'SERVER_DISCOVERY_NETWORK_ERROR',
-        details: err,
-        retryable: true
-      });
+      const speedTestError: SpeedTestError = Object.assign(
+        new Error(`Failed to discover servers: ${err.message}`),
+        {
+          name: 'SpeedTestError' as const,
+          code: 'SERVER_DISCOVERY_NETWORK_ERROR',
+          details: err,
+          retryable: true,
+        }
+      );
       throw speedTestError;
     }
   }
@@ -295,15 +350,15 @@ export class CloudflareSpeedTestClient {
       return [];
     }
 
-    return serversData.map(server => ({
+    return serversData.map((server) => ({
       name: server.iata || server.name || 'unknown',
       location: `${server.city || 'unknown'}, ${server.region || 'unknown'}`,
       country: server.country || 'unknown',
-      city: server.city || 'unknown', 
+      city: server.city || 'unknown',
       region: server.region || 'unknown',
       latitude: server.lat,
       longitude: server.lon,
-      distance: server.distance
+      distance: server.distance,
     }));
   }
 

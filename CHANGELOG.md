@@ -4,6 +4,48 @@ All notable changes to the speed-cloudflare-mcp project will be documented in th
 
 ## [Unreleased]
 
+**Server Information MCP Tool Implementation Complete (Task 006)** - Server discovery and information tool with regional filtering
+- New MCP tool: get_server_info for discovering available Cloudflare speed test servers
+- Regional filtering by continent, country, and region
+- Distance calculation from user location with optional distance-based filtering
+- Server information caching with 5-minute TTL for performance optimization
+- Geographic utilities for distance calculations using haversine formula
+- Server discovery service with comprehensive filtering and sorting capabilities
+- Integration with existing rate limiting system
+- Complete unit test suite with validation and error handling coverage
+
+### Technical Implementation Details (Task 006)
+- **Server Discovery Service**: Centralized service for managing server information
+  - Caching layer with configurable TTL (5 minutes default)
+  - Automatic cache invalidation and refresh
+  - Fallback to stale cache on discovery failures
+  - Server statistics aggregation by continent and country
+- **Geographic Utilities**: Distance and location calculations
+  - Haversine formula implementation for accurate distance calculations
+  - Coordinate validation and formatting utilities
+  - Continent mapping from country codes
+  - Regional filtering with multi-level criteria
+- **MCP Tool Implementation**: Full integration with existing tool infrastructure
+  - JSON schema validation for input parameters
+  - Support for continent, country, region, and distance filters
+  - Configurable result limit (1-100 servers)
+  - Optional distance calculation based on user location
+  - Structured response with server details and statistics
+- **Performance Optimizations**: Efficient server data handling
+  - In-memory caching to reduce API calls
+  - Rate limiting integration using existing CONNECTION_INFO operation
+  - Batch distance calculations for multiple servers
+  - Sorted results by distance when user location available
+
+### Files Created/Modified (Task 006)
+- `src/tools/server-info.ts` - Server information tool implementation
+- `src/schemas/tools/server-info.json` - JSON schema for tool validation
+- `src/services/server-discovery.ts` - Server discovery service with caching
+- `src/utils/geo.ts` - Geographic utility functions
+- `tests/tools/server-info.test.ts` - Comprehensive unit tests
+- `src/tools/index.ts` - Updated tool registry with new tool
+- `docs/2-implementation/server-info-tool/` - Feature documentation and tracking
+
 **Speed Test MCP Tools Implementation Complete (Task 005)** - Granular MCP tools for targeted network diagnostics
 - Six specialized MCP tools for granular speed testing control
 - Individual tools: test_latency, test_download_speed, test_upload_speed, test_packet_loss

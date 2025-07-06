@@ -44,6 +44,8 @@ function getLogLevel(): LogLevel {
     case 'error':
       return LogLevel.ERROR;
     default:
-      return process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO;
+      return process.env.NODE_ENV === 'development'
+        ? LogLevel.DEBUG
+        : LogLevel.INFO;
   }
 }
