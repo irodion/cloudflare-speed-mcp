@@ -46,7 +46,11 @@ class Logger {
     this.log(LogLevel.ERROR, message, context);
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, unknown>
+  ): void {
     if (!this.shouldLog(level)) {
       return;
     }

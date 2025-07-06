@@ -1,4 +1,8 @@
-import { OperationType, RateLimitConfig, RateLimitBackoffConfig } from '../types/rate-limit.js';
+import {
+  OperationType,
+  RateLimitConfig,
+  RateLimitBackoffConfig,
+} from '../types/rate-limit.js';
 
 export const DEFAULT_RATE_LIMITS: Record<OperationType, RateLimitConfig> = {
   [OperationType.SPEED_TEST]: {
@@ -74,7 +78,9 @@ export const DEFAULT_BACKOFF_CONFIG: RateLimitBackoffConfig = {
   jitterFactor: 0.1,
 };
 
-export function getRateLimitConfig(operationType: OperationType): RateLimitConfig {
+export function getRateLimitConfig(
+  operationType: OperationType
+): RateLimitConfig {
   const envPrefix = `RATE_LIMIT_${camelToScreamingSnakeCase(operationType)}`;
   const defaultConfig = DEFAULT_RATE_LIMITS[operationType];
 
@@ -111,22 +117,22 @@ export function getRateLimitConfig(operationType: OperationType): RateLimitConfi
 export function getBackoffConfig(): RateLimitBackoffConfig {
   return {
     baseDelayMs: getEnvInteger(
-      'RATE_LIMIT_BACKOFF_BASE_DELAY_MS', 
+      'RATE_LIMIT_BACKOFF_BASE_DELAY_MS',
       DEFAULT_BACKOFF_CONFIG.baseDelayMs,
       60000 // Max 60 seconds base delay
     ),
     maxDelayMs: getEnvInteger(
-      'RATE_LIMIT_BACKOFF_MAX_DELAY_MS', 
+      'RATE_LIMIT_BACKOFF_MAX_DELAY_MS',
       DEFAULT_BACKOFF_CONFIG.maxDelayMs,
       600000 // Max 10 minutes
     ),
     backoffMultiplier: getEnvNumber(
-      'RATE_LIMIT_BACKOFF_MULTIPLIER', 
+      'RATE_LIMIT_BACKOFF_MULTIPLIER',
       DEFAULT_BACKOFF_CONFIG.backoffMultiplier,
       10 // Max 10x multiplier
     ),
     jitterFactor: getEnvNumber(
-      'RATE_LIMIT_BACKOFF_JITTER_FACTOR', 
+      'RATE_LIMIT_BACKOFF_JITTER_FACTOR',
       DEFAULT_BACKOFF_CONFIG.jitterFactor,
       1.0 // Max 100% jitter
     ),
@@ -146,17 +152,17 @@ function parseEnvValue<T>(
 
   const parsed = parser(value);
   const numValue = parsed as number;
-  
+
   if (isNaN(numValue)) {
     console.warn(`${envVar}: ${value} (not a number)`);
     return defaultValue;
   }
-  
+
   if (numValue < 0) {
     console.warn(`${envVar}: ${value} (negative value)`);
     return defaultValue;
   }
-  
+
   if (maxValue !== undefined && numValue > (maxValue as number)) {
     console.warn(`${envVar}: ${value} (exceeds maximum allowed value)`);
     return defaultValue;
@@ -165,11 +171,19 @@ function parseEnvValue<T>(
   return parsed;
 }
 
-function getEnvInteger(envVar: string, defaultValue: number, maxValue?: number): number {
+function getEnvInteger(
+  envVar: string,
+  defaultValue: number,
+  maxValue?: number
+): number {
   return parseEnvValue(envVar, defaultValue, (v) => parseInt(v, 10), maxValue);
 }
 
-function getEnvNumber(envVar: string, defaultValue: number, maxValue?: number): number {
+function getEnvNumber(
+  envVar: string,
+  defaultValue: number,
+  maxValue?: number
+): number {
   return parseEnvValue(envVar, defaultValue, parseFloat, maxValue);
 }
 

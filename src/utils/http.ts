@@ -7,7 +7,9 @@ export class TimeoutError extends Error {
 
 export class RetryError extends Error {
   constructor(attempts: number, lastError: Error) {
-    super(`Failed after ${attempts} attempts. Last error: ${lastError.message}`);
+    super(
+      `Failed after ${attempts} attempts. Last error: ${lastError.message}`
+    );
     this.name = 'RetryError';
     this.cause = lastError;
   }
@@ -36,21 +38,22 @@ export class HttpClient {
 
   async withTimeout<T>(promise: Promise<T>, timeoutMs?: number): Promise<T> {
     const timeout = timeoutMs || this.timeout;
-    
+
     return Promise.race([
       promise,
       new Promise<never>((_, reject) => {
         setTimeout(() => reject(new TimeoutError(timeout)), timeout);
-      })
+      }),
     ]);
   }
 
   private isRetryableError(error: Error): boolean {
     if (!this.retryConfig.retryableErrors) return false;
-    
-    return this.retryConfig.retryableErrors.some(code => 
-      error.message.includes(code) || 
-      (error as { code?: string }).code === code
+
+    return this.retryConfig.retryableErrors.some(
+      (code) =>
+        error.message.includes(code) ||
+        (error as { code?: string }).code === code
     );
   }
 
@@ -64,19 +67,22 @@ export class HttpClient {
   }
 
   private async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async withRetry<T>(operation: () => Promise<T>): Promise<T> {
     let lastError: Error = new Error('Unknown error');
-    
+
     for (let attempt = 1; attempt <= this.retryConfig.maxAttempts; attempt++) {
       try {
         return await operation();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
-        if (attempt === this.retryConfig.maxAttempts || !this.isRetryableError(lastError)) {
+
+        if (
+          attempt === this.retryConfig.maxAttempts ||
+          !this.isRetryableError(lastError)
+        ) {
           break;
         }
 
@@ -88,7 +94,10 @@ export class HttpClient {
     throw new RetryError(this.retryConfig.maxAttempts, lastError);
   }
 
-  async fetch(url: string, options: globalThis.RequestInit = {}): Promise<Response> {
+  async fetch(
+    url: string,
+    options: globalThis.RequestInit = {}
+  ): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -96,7 +105,7 @@ export class HttpClient {
       const response = await this.withRetry(async () => {
         return fetch(url, {
           ...options,
-          signal: controller.signal
+          signal: controller.signal,
         });
       });
 
@@ -104,11 +113,11 @@ export class HttpClient {
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       if (error instanceof Error && error.name === 'AbortError') {
         throw new TimeoutError(this.timeout);
       }
-      
+
       throw error;
     }
   }

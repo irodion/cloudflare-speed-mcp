@@ -65,7 +65,7 @@ describe('SpeedCloudflareServer', () => {
     it('should allow adding shutdown handlers', () => {
       const handler = jest.fn().mockResolvedValue(undefined);
       server.addShutdownHandler(handler);
-      
+
       // No direct way to test this without stopping the server
       expect(() => server.addShutdownHandler(handler)).not.toThrow();
     });
@@ -75,7 +75,7 @@ describe('SpeedCloudflareServer', () => {
     it('should return immutable configuration copy', () => {
       const config1 = server.getConfig();
       const config2 = server.getConfig();
-      
+
       expect(config1).toEqual(config2);
       expect(config1).not.toBe(config2); // Different objects
     });
@@ -83,7 +83,7 @@ describe('SpeedCloudflareServer', () => {
     it('should return immutable state copy', () => {
       const state1 = server.getState();
       const state2 = server.getState();
-      
+
       expect(state1).toEqual(state2);
       expect(state1).not.toBe(state2); // Different objects
     });

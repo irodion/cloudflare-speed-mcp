@@ -37,7 +37,10 @@ export class RateLimiter {
     }
   }
 
-  private initializeState(operationType: OperationType, config: RateLimitConfig): void {
+  private initializeState(
+    operationType: OperationType,
+    config: RateLimitConfig
+  ): void {
     const now = getCurrentTimestamp();
     this.states.set(operationType, {
       tokens: config.maxBucketSize,
@@ -95,12 +98,12 @@ export class RateLimiter {
 
   public acquirePermission(operationType: OperationType): void {
     const result = this.checkRateLimit(operationType);
-    
+
     if (!result.allowed) {
       this.recordFailure(operationType);
       const backoffDelay = this.calculateCurrentBackoffDelay(operationType);
       const totalWaitTime = Math.max(result.waitTimeMs || 0, backoffDelay);
-      
+
       throw new RateLimitError(
         `Rate limit exceeded for ${operationType}. ${result.reason}. Wait ${formatDuration(totalWaitTime)}.`,
         totalWaitTime,
@@ -168,7 +171,7 @@ export class RateLimiter {
   private refillTokens(operationType: OperationType): void {
     const config = this.configs.get(operationType);
     const state = this.states.get(operationType);
-    
+
     if (!config || !state) {
       throw new RateLimitError(
         `Invalid state for operation type: ${operationType}`,
@@ -213,7 +216,7 @@ export class RateLimiter {
   private checkConcurrentLimit(operationType: OperationType): RateLimitResult {
     const config = this.configs.get(operationType);
     const state = this.states.get(operationType);
-    
+
     if (!config || !state) {
       throw new RateLimitError(
         `Invalid state for operation type: ${operationType}`,
@@ -357,7 +360,7 @@ export class RateLimiter {
         'token_bucket'
       );
     }
-    
+
     if (backoffState.consecutiveFailures === 0) {
       return 0;
     }
@@ -371,17 +374,22 @@ export class RateLimiter {
     );
   }
 
-  private mapReasonToLimitType(reason: string): 'token_bucket' | 'daily_limit' | 'concurrent_limit' {
+  private mapReasonToLimitType(
+    reason: string
+  ): 'token_bucket' | 'daily_limit' | 'concurrent_limit' {
     const lowerReason = reason.toLowerCase();
-    
-    if (lowerReason.includes('concurrent') || lowerReason.includes('maximum concurrent')) {
+
+    if (
+      lowerReason.includes('concurrent') ||
+      lowerReason.includes('maximum concurrent')
+    ) {
       return 'concurrent_limit';
     }
-    
+
     if (lowerReason.includes('daily') || lowerReason.includes('daily limit')) {
       return 'daily_limit';
     }
-    
+
     // Default to token_bucket for bucket-related reasons or unknown reasons
     return 'token_bucket';
   }

@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import { getRateLimitConfig, getBackoffConfig } from '../config/rate-limits.js';
 import { OperationType } from '../types/rate-limit.js';
 
@@ -19,7 +26,7 @@ describe('Rate Limit Configuration', () => {
   describe('getRateLimitConfig', () => {
     it('should use default values when environment variables are not set', () => {
       const config = getRateLimitConfig(OperationType.SPEED_TEST);
-      
+
       expect(config.tokensPerInterval).toBe(1);
       expect(config.intervalMs).toBe(180000);
       expect(config.maxBucketSize).toBe(2);
@@ -35,7 +42,7 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_SPEED_TEST_MAX_CONCURRENT_REQUESTS = '3';
 
       const config = getRateLimitConfig(OperationType.SPEED_TEST);
-      
+
       expect(config.tokensPerInterval).toBe(5);
       expect(config.intervalMs).toBe(300000);
       expect(config.maxBucketSize).toBe(10);
@@ -48,14 +55,18 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_SPEED_TEST_INTERVAL_MS = '-100';
 
       const config = getRateLimitConfig(OperationType.SPEED_TEST);
-      
+
       expect(config.tokensPerInterval).toBe(1); // default
       expect(config.intervalMs).toBe(180000); // default
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('RATE_LIMIT_SPEED_TEST_TOKENS_PER_INTERVAL: -1 (negative value)')
+        expect.stringContaining(
+          'RATE_LIMIT_SPEED_TEST_TOKENS_PER_INTERVAL: -1 (negative value)'
+        )
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('RATE_LIMIT_SPEED_TEST_INTERVAL_MS: -100 (negative value)')
+        expect.stringContaining(
+          'RATE_LIMIT_SPEED_TEST_INTERVAL_MS: -100 (negative value)'
+        )
       );
     });
 
@@ -67,7 +78,7 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_SPEED_TEST_MAX_CONCURRENT_REQUESTS = '200'; // Max is 100
 
       const config = getRateLimitConfig(OperationType.SPEED_TEST);
-      
+
       expect(config.tokensPerInterval).toBe(1); // default
       expect(config.intervalMs).toBe(180000); // default
       expect(config.maxBucketSize).toBe(2); // default
@@ -84,14 +95,18 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_SPEED_TEST_INTERVAL_MS = 'not-a-number';
 
       const config = getRateLimitConfig(OperationType.SPEED_TEST);
-      
+
       expect(config.tokensPerInterval).toBe(1); // default
       expect(config.intervalMs).toBe(180000); // default
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('RATE_LIMIT_SPEED_TEST_TOKENS_PER_INTERVAL: invalid (not a number)')
+        expect.stringContaining(
+          'RATE_LIMIT_SPEED_TEST_TOKENS_PER_INTERVAL: invalid (not a number)'
+        )
       );
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('RATE_LIMIT_SPEED_TEST_INTERVAL_MS: not-a-number (not a number)')
+        expect.stringContaining(
+          'RATE_LIMIT_SPEED_TEST_INTERVAL_MS: not-a-number (not a number)'
+        )
       );
     });
   });
@@ -99,7 +114,7 @@ describe('Rate Limit Configuration', () => {
   describe('getBackoffConfig', () => {
     it('should use default values when environment variables are not set', () => {
       const config = getBackoffConfig();
-      
+
       expect(config.baseDelayMs).toBe(1000);
       expect(config.maxDelayMs).toBe(60000);
       expect(config.backoffMultiplier).toBe(2);
@@ -113,7 +128,7 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_BACKOFF_JITTER_FACTOR = '0.2';
 
       const config = getBackoffConfig();
-      
+
       expect(config.baseDelayMs).toBe(2000);
       expect(config.maxDelayMs).toBe(120000);
       expect(config.backoffMultiplier).toBe(3);
@@ -127,7 +142,7 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_BACKOFF_JITTER_FACTOR = '2.0'; // Max is 1.0
 
       const config = getBackoffConfig();
-      
+
       expect(config.baseDelayMs).toBe(1000); // default
       expect(config.maxDelayMs).toBe(60000); // default
       expect(config.backoffMultiplier).toBe(2); // default
@@ -143,7 +158,7 @@ describe('Rate Limit Configuration', () => {
       process.env.RATE_LIMIT_BACKOFF_JITTER_FACTOR = '-0.1';
 
       const config = getBackoffConfig();
-      
+
       expect(config.baseDelayMs).toBe(1000); // default
       expect(config.jitterFactor).toBe(0.1); // default
       expect(consoleWarnSpy).toHaveBeenCalledWith(
@@ -161,7 +176,7 @@ describe('Rate Limit Configuration', () => {
 
       const rateLimitConfig = getRateLimitConfig(OperationType.SPEED_TEST);
       const backoffConfig = getBackoffConfig();
-      
+
       expect(rateLimitConfig.tokensPerInterval).toBe(1000);
       expect(rateLimitConfig.intervalMs).toBe(86400000);
       expect(backoffConfig.jitterFactor).toBe(1.0);
@@ -174,7 +189,7 @@ describe('Rate Limit Configuration', () => {
 
       const rateLimitConfig = getRateLimitConfig(OperationType.SPEED_TEST);
       const backoffConfig = getBackoffConfig();
-      
+
       expect(rateLimitConfig.tokensPerInterval).toBe(0);
       expect(backoffConfig.jitterFactor).toBe(0);
       expect(consoleWarnSpy).not.toHaveBeenCalled();

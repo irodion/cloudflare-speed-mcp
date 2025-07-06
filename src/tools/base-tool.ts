@@ -6,19 +6,22 @@ import { RateLimiter } from '../services/rate-limiter.js';
 import { OperationType } from '../types/rate-limit.js';
 import { CloudflareSpeedTestClient } from '../clients/cloudflare.js';
 import { logger } from '../utils/logger.js';
-import type { 
-  McpToolRequest, 
-  McpToolResponse, 
-  ToolExecutionContext, 
+import type {
+  McpToolRequest,
+  McpToolResponse,
+  ToolExecutionContext,
   ToolResult,
-  BaseToolOptions 
+  BaseToolOptions,
 } from '../types/tools.js';
 
 export abstract class BaseTool {
   protected rateLimiter: RateLimiter;
   protected cloudflareClient: CloudflareSpeedTestClient;
-  
-  constructor(rateLimiter: RateLimiter, cloudflareClient: CloudflareSpeedTestClient) {
+
+  constructor(
+    rateLimiter: RateLimiter,
+    cloudflareClient: CloudflareSpeedTestClient
+  ) {
     this.rateLimiter = rateLimiter;
     this.cloudflareClient = cloudflareClient;
   }
@@ -30,7 +33,7 @@ export abstract class BaseTool {
     const context: ToolExecutionContext = {
       toolName: this.getToolName(),
       startTime: new Date(),
-      timeout: this.extractTimeout(request.arguments)
+      timeout: this.extractTimeout(request.arguments),
     };
 
     try {
@@ -46,20 +49,22 @@ export abstract class BaseTool {
       // Format and return response
       if (!result.success) {
         // Preserve error details from ToolResult
-        const error = result.error || { code: 'EXECUTION_ERROR', message: 'Tool execution failed' };
+        const error = result.error || {
+          code: 'EXECUTION_ERROR',
+          message: 'Tool execution failed',
+        };
         const preservedError = Object.assign(new Error(error.message), {
           code: error.code,
-          details: error.details
+          details: error.details,
         });
         return this.formatErrorResponse(preservedError, context);
       }
       return this.formatResponse(result);
-
     } catch (error) {
-      logger.error(`Tool execution failed: ${context.toolName}`, { 
+      logger.error(`Tool execution failed: ${context.toolName}`, {
         error: error instanceof Error ? error.message : String(error),
         toolName: context.toolName,
-        arguments: request.arguments
+        arguments: request.arguments,
       });
 
       return this.formatErrorResponse(error, context);
@@ -87,13 +92,22 @@ export abstract class BaseTool {
   protected validateArguments(args: Record<string, unknown>): void {
     // Basic validation - can be extended by subclasses
     if (args.timeout !== undefined) {
-      if (typeof args.timeout !== 'number' || args.timeout <= 0 || args.timeout > 300) {
-        throw new Error('Timeout must be a positive number between 1 and 300 seconds');
+      if (
+        typeof args.timeout !== 'number' ||
+        args.timeout <= 0 ||
+        args.timeout > 300
+      ) {
+        throw new Error(
+          'Timeout must be a positive number between 1 and 300 seconds'
+        );
       }
     }
 
     if (args.serverLocation !== undefined) {
-      if (typeof args.serverLocation !== 'string' || args.serverLocation.trim().length === 0) {
+      if (
+        typeof args.serverLocation !== 'string' ||
+        args.serverLocation.trim().length === 0
+      ) {
         throw new Error('Server location must be a non-empty string');
       }
     }
@@ -127,7 +141,7 @@ export abstract class BaseTool {
   protected extractBaseOptions(args: Record<string, unknown>): BaseToolOptions {
     return {
       timeout: args.timeout as number | undefined,
-      serverLocation: args.serverLocation as string | undefined
+      serverLocation: args.serverLocation as string | undefined,
     };
   }
 
@@ -139,21 +153,26 @@ export abstract class BaseTool {
       success: result.success,
       data: result.data,
       executionTime: result.executionTime,
-      timestamp: result.timestamp
+      timestamp: result.timestamp,
     };
 
     return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify(response, null, 2)
-      }]
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
     };
   }
 
   /**
    * Format error response
    */
-  protected formatErrorResponse(error: unknown, context: ToolExecutionContext): McpToolResponse {
+  protected formatErrorResponse(
+    error: unknown,
+    context: ToolExecutionContext
+  ): McpToolResponse {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const executionTime = Date.now() - context.startTime.getTime();
 
@@ -164,7 +183,7 @@ export abstract class BaseTool {
     } else if (error instanceof Error) {
       details = {
         name: error.name,
-        stack: error.stack
+        stack: error.stack,
       };
     }
 
@@ -173,19 +192,21 @@ export abstract class BaseTool {
       error: {
         code: this.getErrorCode(error),
         message: errorMessage,
-        details
+        details,
       },
       executionTime,
       timestamp: new Date().toISOString(),
-      toolName: context.toolName
+      toolName: context.toolName,
     };
 
     return {
-      content: [{
-        type: 'text' as const,
-        text: JSON.stringify(response, null, 2)
-      }],
-      isError: true
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
+      isError: true,
     };
   }
 
@@ -194,10 +215,15 @@ export abstract class BaseTool {
    */
   protected getErrorCode(error: unknown): string {
     // First check if error has a code property (preserve original error codes)
-    if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof error.code === 'string'
+    ) {
       return error.code;
     }
-    
+
     if (error instanceof Error) {
       if (error.message.includes('timeout')) {
         return 'TIMEOUT_ERROR';
@@ -205,10 +231,16 @@ export abstract class BaseTool {
       if (error.message.includes('rate limit')) {
         return 'RATE_LIMIT_ERROR';
       }
-      if (error.message.includes('validation') || error.message.includes('invalid')) {
+      if (
+        error.message.includes('validation') ||
+        error.message.includes('invalid')
+      ) {
         return 'VALIDATION_ERROR';
       }
-      if (error.message.includes('network') || error.message.includes('connection')) {
+      if (
+        error.message.includes('network') ||
+        error.message.includes('connection')
+      ) {
         return 'NETWORK_ERROR';
       }
     }
@@ -229,7 +261,7 @@ export abstract class BaseTool {
       data,
       error,
       executionTime: executionTime || 0,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -237,7 +269,7 @@ export abstract class BaseTool {
    * Abstract method for tool-specific implementation
    */
   protected abstract executeImpl(
-    args: Record<string, unknown>, 
+    args: Record<string, unknown>,
     context: ToolExecutionContext
   ): Promise<ToolResult>;
 }

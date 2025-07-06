@@ -12,6 +12,7 @@ import { UploadTestTool } from './upload-test.js';
 import { PacketLossTestTool } from './packet-loss-test.js';
 import { SpeedTestTool } from './speed-test.js';
 import { ConnectionInfoTool } from './connection-info.js';
+import { ServerInfoTool } from './server-info.js';
 
 export {
   BaseTool,
@@ -20,7 +21,8 @@ export {
   UploadTestTool,
   PacketLossTestTool,
   SpeedTestTool,
-  ConnectionInfoTool
+  ConnectionInfoTool,
+  ServerInfoTool,
 };
 
 /**
@@ -29,7 +31,10 @@ export {
 export class ToolRegistry {
   private tools: Map<string, BaseTool> = new Map();
 
-  constructor(rateLimiter: RateLimiter, cloudflareClient: CloudflareSpeedTestClient) {
+  constructor(
+    rateLimiter: RateLimiter,
+    cloudflareClient: CloudflareSpeedTestClient
+  ) {
     // Initialize all tools
     const toolInstances = [
       new LatencyTestTool(rateLimiter, cloudflareClient),
@@ -37,7 +42,8 @@ export class ToolRegistry {
       new UploadTestTool(rateLimiter, cloudflareClient),
       new PacketLossTestTool(rateLimiter, cloudflareClient),
       new SpeedTestTool(rateLimiter, cloudflareClient),
-      new ConnectionInfoTool(rateLimiter, cloudflareClient)
+      new ConnectionInfoTool(rateLimiter, cloudflareClient),
+      new ServerInfoTool(rateLimiter, cloudflareClient),
     ];
 
     // Register tools by name
@@ -68,17 +74,20 @@ export class ToolRegistry {
     description: string;
     inputSchema: Record<string, unknown>;
   }> {
-    return this.getAllTools().map(tool => ({
+    return this.getAllTools().map((tool) => ({
       name: tool.getToolName(),
       description: tool.getDescription(),
-      inputSchema: tool.getInputSchema()
+      inputSchema: tool.getInputSchema(),
     }));
   }
 
   /**
    * Execute a tool by name with the given arguments
    */
-  async executeTool(name: string, args?: Record<string, unknown>): Promise<McpToolResponse> {
+  async executeTool(
+    name: string,
+    args?: Record<string, unknown>
+  ): Promise<McpToolResponse> {
     const tool = this.getTool(name);
     if (!tool) {
       throw new Error(`Tool '${name}' not found`);
@@ -86,7 +95,7 @@ export class ToolRegistry {
 
     return await tool.execute({
       name,
-      arguments: args
+      arguments: args,
     });
   }
 }

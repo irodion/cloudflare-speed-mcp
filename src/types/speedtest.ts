@@ -1,31 +1,34 @@
-export type SpeedTestMeasurement = {
-  type: 'latency',
-  numPackets: number
-} | {
-  type: 'download' | 'upload',
-  bytes: number,
-  count: number,
-  bypassMinDuration?: boolean
-} | {
-  type: 'packetLoss',
-  numPackets?: number,
-  batchSize?: number,
-  batchWaitTime?: number,
-  responsesWaitTime?: number,
-  connectionTimeout?: number,
-};
+export type SpeedTestMeasurement =
+  | {
+      type: 'latency';
+      numPackets: number;
+    }
+  | {
+      type: 'download' | 'upload';
+      bytes: number;
+      count: number;
+      bypassMinDuration?: boolean;
+    }
+  | {
+      type: 'packetLoss';
+      numPackets?: number;
+      batchSize?: number;
+      batchWaitTime?: number;
+      responsesWaitTime?: number;
+      connectionTimeout?: number;
+    };
 
 export interface SpeedTestResults {
   getSummary(): {
-    download?: number,
-    upload?: number,
-    latency?: number,
-    jitter?: number,
-    downLoadedLatency?: number,
-    downLoadedJitter?: number,
-    upLoadedLatency?: number,
-    upLoadedJitter?: number,
-    packetLoss?: number,
+    download?: number;
+    upload?: number;
+    latency?: number;
+    jitter?: number;
+    downLoadedLatency?: number;
+    downLoadedJitter?: number;
+    upLoadedLatency?: number;
+    upLoadedJitter?: number;
+    packetLoss?: number;
   };
   getDownloadBandwidth(): number | undefined;
   getUploadBandwidth(): number | undefined;
@@ -108,7 +111,12 @@ export interface ConnectionInfo {
   timezone: string;
 }
 
-export type SpeedTestType = 'latency' | 'download' | 'upload' | 'packetLoss' | 'full';
+export type SpeedTestType =
+  | 'latency'
+  | 'download'
+  | 'upload'
+  | 'packetLoss'
+  | 'full';
 
 export interface SpeedTestOptions {
   type?: SpeedTestType;
