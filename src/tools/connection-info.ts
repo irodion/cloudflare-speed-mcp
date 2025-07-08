@@ -126,37 +126,28 @@ export class ConnectionInfoTool extends BaseTool {
   private async getConnectionDetails(
     options: ConnectionInfoOptions
   ): Promise<ConnectionInfoResult['data']> {
-    // Simplified implementation - in practice, this would call external services
-    // or Cloudflare APIs to get real connection information
+    // Get real connection information from Cloudflare
+    const connectionInfo = await this.cloudflareClient.getConnectionInfo();
 
-    // Mock data for demonstration - replace with actual API calls
-    const baseData = {
-      ip: '203.0.113.1', // Example IP
-      isp: 'Example ISP',
+    // Build the connection data structure
+    const connectionData: ConnectionInfoResult['data'] = {
+      ip: connectionInfo.ip,
+      isp: options.includeISP !== false ? connectionInfo.isp : 'Hidden',
       connection: {
-        type: 'broadband',
-        asn: 12345,
-        organization: 'Example Internet Provider',
+        type: 'broadband', // Cloudflare doesn't provide this, using default
+        asn: 0, // Cloudflare trace API doesn't provide ASN
+        organization: options.includeISP !== false ? connectionInfo.isp : 'Hidden',
       },
     };
 
-    const locationData = {
-      country: 'United States',
-      region: 'California',
-      city: 'San Francisco',
-      timezone: 'America/Los_Angeles',
-    };
-
-    // Build connection data conditionally
-    const connectionData: ConnectionInfoResult['data'] = {
-      ...baseData,
-      ...(options.includeLocation !== false && { location: locationData }),
-    };
-
-    // Conditionally include ISP details
-    if (options.includeISP === false && connectionData) {
-      connectionData.isp = 'Hidden';
-      connectionData.connection.organization = 'Hidden';
+    // Add location data if requested
+    if (options.includeLocation !== false) {
+      connectionData.location = {
+        country: connectionInfo.country,
+        region: connectionInfo.region,
+        city: connectionInfo.city,
+        timezone: connectionInfo.timezone,
+      };
     }
 
     return connectionData;
