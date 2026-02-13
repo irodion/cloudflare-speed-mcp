@@ -42,7 +42,8 @@ export class HttpClient {
     return Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new TimeoutError(timeout)), timeout);
+        const timer = setTimeout(() => reject(new TimeoutError(timeout)), timeout);
+        timer.unref();
       }),
     ]);
   }

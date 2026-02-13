@@ -163,12 +163,12 @@ export class ServerInfoTool extends BaseTool {
             latitude: undefined,
             longitude: undefined,
             country: connectionInfo.country,
-            region: connectionInfo.region,
-            city: connectionInfo.city,
+            region: connectionInfo.region ?? undefined,
+            city: connectionInfo.city ?? undefined,
           };
           logger.info('User location determined (coordinates not available)', {
-            country: userLocation.country,
-            city: userLocation.city,
+            country: userLocation?.country,
+            city: userLocation?.city,
           });
         } catch (error) {
           logger.warn('Failed to get user location for distance calculation', {

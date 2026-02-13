@@ -18,7 +18,7 @@ export class ConnectionInfoTool extends BaseTool {
   }
 
   getDescription(): string {
-    return 'Get detailed information about the current network connection including IP, ISP, and location data';
+    return 'Get information about the current network connection including IP address and country from the Cloudflare trace API';
   }
 
   getInputSchema(): Record<string, unknown> {
@@ -67,9 +67,6 @@ export class ConnectionInfoTool extends BaseTool {
         options,
       });
 
-      // Get connection info through Cloudflare's API
-      // Note: This is a simplified implementation - actual implementation would need
-      // to call appropriate Cloudflare APIs or use external IP services
       const connectionData = await this.getConnectionDetails(options);
 
       const executionTime = Date.now() - startTime;
@@ -104,10 +101,6 @@ export class ConnectionInfoTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );
@@ -126,21 +119,19 @@ export class ConnectionInfoTool extends BaseTool {
   private async getConnectionDetails(
     options: ConnectionInfoOptions
   ): Promise<ConnectionInfoResult['data']> {
-    // Get real connection information from Cloudflare
     const connectionInfo = await this.cloudflareClient.getConnectionInfo();
 
-    // Build the connection data structure
     const connectionData: ConnectionInfoResult['data'] = {
       ip: connectionInfo.ip,
-      isp: options.includeISP !== false ? connectionInfo.isp : 'Hidden',
+      isp: options.includeISP !== false ? connectionInfo.isp : null,
       connection: {
-        type: 'broadband', // Cloudflare doesn't provide this, using default
-        asn: 0, // Cloudflare trace API doesn't provide ASN
-        organization: options.includeISP !== false ? connectionInfo.isp : 'Hidden',
+        type: null,
+        asn: null,
+        organization: connectionInfo.isp,
       },
+      raw: connectionInfo.raw,
     };
 
-    // Add location data if requested
     if (options.includeLocation !== false) {
       connectionData.location = {
         country: connectionInfo.country,
@@ -153,9 +144,6 @@ export class ConnectionInfoTool extends BaseTool {
     return connectionData;
   }
 
-  /**
-   * Get the operation type for rate limiting
-   */
   protected getOperationType(): OperationType {
     return OperationType.CONNECTION_INFO;
   }

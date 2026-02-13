@@ -66,19 +66,16 @@ export interface ToolResult {
 
 export interface LatencyResult extends ToolResult {
   data?: {
-    latency: number;
-    jitter: number;
-    packetsSent: number;
-    packetsReceived: number;
-    packetLoss: number;
+    latency: number | null;
+    jitter: number | null;
+    downLoadedLatency?: number | null;
+    upLoadedLatency?: number | null;
   };
 }
 
 export interface BandwidthResult extends ToolResult {
   data?: {
     bandwidth: number;
-    bytes: number;
-    duration: number;
     throughput: number;
   };
 }
@@ -86,13 +83,6 @@ export interface BandwidthResult extends ToolResult {
 export interface PacketLossResult extends ToolResult {
   data?: {
     packetLoss: number;
-    totalPackets: number;
-    lostPackets: number;
-    batchResults: Array<{
-      batchId: number;
-      packetsLost: number;
-      packetsTotal: number;
-    }>;
   };
 }
 
@@ -113,21 +103,19 @@ export interface ComprehensiveSpeedResult extends ToolResult {
 export interface ConnectionInfoResult extends ToolResult {
   data?: {
     ip: string;
-    isp: string;
+    isp: string | null;
     location?: {
       country: string;
-      region: string;
-      city: string;
-      timezone: string;
-      coordinates?: {
-        latitude: number;
-        longitude: number;
-      };
+      region: string | null;
+      city: string | null;
+      timezone: string | null;
     };
     connection: {
-      type: string;
-      asn: number;
-      organization: string;
+      type: string | null;
+      asn: number | null;
+      organization: string | null;
     };
+    /** Raw Cloudflare trace data */
+    raw?: Record<string, string>;
   };
 }

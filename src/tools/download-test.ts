@@ -9,7 +9,6 @@ import type {
   ToolResult,
   BandwidthTestOptions,
 } from '../types/tools.js';
-import type { SpeedTestMeasurement } from '../types/speedtest.js';
 import { logger } from '../utils/logger.js';
 
 export class DownloadTestTool extends BaseTool {
@@ -149,10 +148,6 @@ export class DownloadTestTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );
@@ -167,22 +162,6 @@ export class DownloadTestTool extends BaseTool {
       duration: args.duration as number | undefined,
       measurementBytes: args.measurementBytes as number | undefined,
     };
-  }
-
-  private createDownloadMeasurements(
-    options: BandwidthTestOptions
-  ): SpeedTestMeasurement[] {
-    const bytes = options.measurementBytes || 10485760; // 10MB default
-    const count = Math.max(1, Math.floor((options.duration || 15) / 5)); // Roughly 5 seconds per measurement
-
-    return [
-      {
-        type: 'download',
-        bytes,
-        count,
-        bypassMinDuration: false,
-      },
-    ];
   }
 
   /**
