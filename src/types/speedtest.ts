@@ -104,11 +104,13 @@ export interface SpeedTestError extends Error {
 
 export interface ConnectionInfo {
   ip: string;
-  isp: string;
+  isp: string | null;
   country: string;
-  region: string;
-  city: string;
-  timezone: string;
+  region: string | null;
+  city: string | null;
+  timezone: string | null;
+  /** Raw key-value data from Cloudflare trace API */
+  raw?: Record<string, string>;
 }
 
 export type SpeedTestType =

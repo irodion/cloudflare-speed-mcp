@@ -99,13 +99,13 @@ export class LatencyTestTool extends BaseTool {
 
       const executionTime = Date.now() - startTime;
 
-      // Extract latency-specific results
+      // Extract latency-specific results from Cloudflare API
+      const summary = results.getSummary();
       const latencyData = {
-        latency: results.getUnloadedLatency() || 0,
-        jitter: results.getSummary().jitter || 0,
-        packetsSent: options.packetCount || 10,
-        packetsReceived: options.packetCount || 10, // Simplified - actual implementation would track this
-        packetLoss: 0, // Latency test typically doesn't measure packet loss
+        latency: results.getUnloadedLatency() ?? null,
+        jitter: summary.jitter ?? null,
+        downLoadedLatency: summary.downLoadedLatency ?? null,
+        upLoadedLatency: summary.upLoadedLatency ?? null,
       };
 
       logger.info('Latency test completed', {
@@ -133,10 +133,6 @@ export class LatencyTestTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );

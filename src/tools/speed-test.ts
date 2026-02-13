@@ -218,10 +218,6 @@ export class SpeedTestTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );
@@ -256,17 +252,13 @@ export class SpeedTestTool extends BaseTool {
       },
     };
 
+    const summary = results.getSummary();
+
     // Extract latency results
     if (testTypes.includes('latency')) {
-      const latency = results.getUnloadedLatency();
-      const jitter = results.getSummary().jitter;
-
       data.latency = {
-        latency: latency || 0,
-        jitter: jitter || 0,
-        packetsSent: 10,
-        packetsReceived: 10,
-        packetLoss: 0,
+        latency: results.getUnloadedLatency() ?? 0,
+        jitter: summary.jitter ?? 0,
       };
     }
 
@@ -277,8 +269,6 @@ export class SpeedTestTool extends BaseTool {
       if (downloadBandwidth !== undefined) {
         data.download = {
           bandwidth: downloadBandwidth,
-          bytes: 10485760,
-          duration: 15,
           throughput: downloadBandwidth / 8,
         };
       }
@@ -291,8 +281,6 @@ export class SpeedTestTool extends BaseTool {
       if (uploadBandwidth !== undefined) {
         data.upload = {
           bandwidth: uploadBandwidth,
-          bytes: 10485760,
-          duration: 15,
           throughput: uploadBandwidth / 8,
         };
       }
@@ -305,9 +293,6 @@ export class SpeedTestTool extends BaseTool {
       if (packetLoss !== undefined) {
         data.packetLoss = {
           packetLoss,
-          totalPackets: 100,
-          lostPackets: Math.round((packetLoss / 100) * 100),
-          batchResults: [],
         };
       }
     }
@@ -328,7 +313,7 @@ export class SpeedTestTool extends BaseTool {
     const recommendations: string[] = [];
 
     // Score latency (lower is better, normalize to 0-100)
-    if (data?.latency) {
+    if (data?.latency?.latency != null) {
       const latencyScore = Math.max(0, 100 - data.latency.latency / 10);
       totalScore += latencyScore;
       componentCount++;

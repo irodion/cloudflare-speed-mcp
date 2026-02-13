@@ -18,7 +18,7 @@ export class ConnectionInfoTool extends BaseTool {
   }
 
   getDescription(): string {
-    return 'Get detailed information about the current network connection including IP, ISP, and location data';
+    return 'Get information about the current network connection including IP address and country from the Cloudflare trace API';
   }
 
   getInputSchema(): Record<string, unknown> {
@@ -67,9 +67,6 @@ export class ConnectionInfoTool extends BaseTool {
         options,
       });
 
-      // Get connection info through Cloudflare's API
-      // Note: This is a simplified implementation - actual implementation would need
-      // to call appropriate Cloudflare APIs or use external IP services
       const connectionData = await this.getConnectionDetails(options);
 
       const executionTime = Date.now() - startTime;
@@ -104,10 +101,6 @@ export class ConnectionInfoTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );
@@ -126,45 +119,31 @@ export class ConnectionInfoTool extends BaseTool {
   private async getConnectionDetails(
     options: ConnectionInfoOptions
   ): Promise<ConnectionInfoResult['data']> {
-    // Simplified implementation - in practice, this would call external services
-    // or Cloudflare APIs to get real connection information
+    const connectionInfo = await this.cloudflareClient.getConnectionInfo();
 
-    // Mock data for demonstration - replace with actual API calls
-    const baseData = {
-      ip: '203.0.113.1', // Example IP
-      isp: 'Example ISP',
-      connection: {
-        type: 'broadband',
-        asn: 12345,
-        organization: 'Example Internet Provider',
-      },
-    };
-
-    const locationData = {
-      country: 'United States',
-      region: 'California',
-      city: 'San Francisco',
-      timezone: 'America/Los_Angeles',
-    };
-
-    // Build connection data conditionally
     const connectionData: ConnectionInfoResult['data'] = {
-      ...baseData,
-      ...(options.includeLocation !== false && { location: locationData }),
+      ip: connectionInfo.ip,
+      isp: options.includeISP !== false ? connectionInfo.isp : null,
+      connection: {
+        type: null,
+        asn: null,
+        organization: connectionInfo.isp,
+      },
+      raw: connectionInfo.raw,
     };
 
-    // Conditionally include ISP details
-    if (options.includeISP === false && connectionData) {
-      connectionData.isp = 'Hidden';
-      connectionData.connection.organization = 'Hidden';
+    if (options.includeLocation !== false) {
+      connectionData.location = {
+        country: connectionInfo.country,
+        region: connectionInfo.region,
+        city: connectionInfo.city,
+        timezone: connectionInfo.timezone,
+      };
     }
 
     return connectionData;
   }
 
-  /**
-   * Get the operation type for rate limiting
-   */
   protected getOperationType(): OperationType {
     return OperationType.CONNECTION_INFO;
   }

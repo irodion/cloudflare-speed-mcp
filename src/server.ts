@@ -140,9 +140,8 @@ export class SpeedCloudflareServer {
         toolName,
         inputSchema,
         async (args: Record<string, unknown>) => {
-          logger.debug('Tool execution requested', { 
+          logger.debug('Tool execution requested', {
             toolName,
-            args
           });
 
           try {
@@ -207,7 +206,7 @@ export class SpeedCloudflareServer {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
-      logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+      logger.error('Uncaught exception', { error: error.message });
       process.exit(1);
     });
 
@@ -224,7 +223,6 @@ export class SpeedCloudflareServer {
     if (originalError instanceof Error) {
       error.details = {
         originalMessage: originalError.message,
-        stack: originalError.stack,
       };
     } else {
       error.details = { originalError };

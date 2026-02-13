@@ -176,15 +176,11 @@ export abstract class BaseTool {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const executionTime = Date.now() - context.startTime.getTime();
 
-    // Preserve details from original error object if available
+    // Preserve structured details from original error if available
+    // Never expose stack traces to clients
     let details;
     if (error && typeof error === 'object' && 'details' in error) {
       details = error.details;
-    } else if (error instanceof Error) {
-      details = {
-        name: error.name,
-        stack: error.stack,
-      };
     }
 
     const response = {

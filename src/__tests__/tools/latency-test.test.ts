@@ -115,7 +115,8 @@ describe('LatencyTestTool', () => {
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('latency', 25.5);
       expect(result.data).toHaveProperty('jitter', 2.1);
-      expect(result.data).toHaveProperty('packetsSent', 15);
+      expect(result.data).toHaveProperty('downLoadedLatency');
+      expect(result.data).toHaveProperty('upLoadedLatency');
     });
 
     test('should handle rate limiting', async () => {
@@ -159,7 +160,7 @@ describe('LatencyTestTool', () => {
 
       expect(response.isError).toBeFalsy();
       const result = JSON.parse(response.content[0].text);
-      expect(result.data.latency).toBe(0);
+      expect(result.data.latency).toBeNull();
     });
   });
 });

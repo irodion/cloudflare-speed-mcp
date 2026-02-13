@@ -9,7 +9,6 @@ import type {
   ToolResult,
   PacketLossTestOptions,
 } from '../types/tools.js';
-import type { SpeedTestMeasurement } from '../types/speedtest.js';
 import { logger } from '../utils/logger.js';
 
 export class PacketLossTestTool extends BaseTool {
@@ -129,40 +128,20 @@ export class PacketLossTestTool extends BaseTool {
 
       const executionTime = Date.now() - startTime;
 
-      // Extract packet loss results
+      // Extract packet loss results from Cloudflare API
       const packetLossPercentage = results.getPacketLoss();
 
       if (packetLossPercentage === undefined) {
         throw new Error('Packet loss measurement failed - no results returned');
       }
 
-      // Calculate batch information
-      const totalPackets = options.packetCount || 100;
-      const batchSize = options.batchSize || 10;
-      const numBatches = Math.ceil(totalPackets / batchSize);
-      const lostPackets = Math.round(
-        (packetLossPercentage / 100) * totalPackets
-      );
-
-      // Generate batch results (simplified simulation)
-      const batchResults = this.generateBatchResults(
-        numBatches,
-        batchSize,
-        lostPackets
-      );
-
       const packetLossData = {
         packetLoss: packetLossPercentage,
-        totalPackets,
-        lostPackets,
-        batchResults,
       };
 
       logger.info('Packet loss test completed', {
         toolName: context.toolName,
         packetLoss: packetLossData.packetLoss,
-        totalPackets: packetLossData.totalPackets,
-        lostPackets: packetLossData.lostPackets,
         executionTime,
       });
 
@@ -189,10 +168,6 @@ export class PacketLossTestTool extends BaseTool {
         {
           code: this.getErrorCode(error),
           message: errorMessage,
-          details:
-            error instanceof Error
-              ? { name: error.name, stack: error.stack }
-              : undefined,
         },
         executionTime
       );
@@ -208,52 +183,6 @@ export class PacketLossTestTool extends BaseTool {
       batchSize: args.batchSize as number | undefined,
       batchWaitTime: args.batchWaitTime as number | undefined,
     };
-  }
-
-  private createPacketLossMeasurements(
-    options: PacketLossTestOptions
-  ): SpeedTestMeasurement[] {
-    const packetCount = options.packetCount || 100;
-    const batchSize = options.batchSize || 10;
-    const batchWaitTime = options.batchWaitTime || 1000;
-
-    return [
-      {
-        type: 'packetLoss',
-        numPackets: packetCount,
-        batchSize,
-        batchWaitTime,
-        responsesWaitTime: 2000,
-        connectionTimeout: 5000,
-      },
-    ];
-  }
-
-  private generateBatchResults(
-    numBatches: number,
-    batchSize: number,
-    totalLostPackets: number
-  ): Array<{ batchId: number; packetsLost: number; packetsTotal: number }> {
-    const batchResults = [];
-    let remainingLostPackets = totalLostPackets;
-
-    for (let i = 0; i < numBatches; i++) {
-      const packetsInThisBatch = Math.min(batchSize, remainingLostPackets);
-      const packetsLostInThisBatch = Math.min(
-        packetsInThisBatch,
-        Math.floor(Math.random() * (remainingLostPackets + 1))
-      );
-
-      batchResults.push({
-        batchId: i + 1,
-        packetsLost: packetsLostInThisBatch,
-        packetsTotal: packetsInThisBatch,
-      });
-
-      remainingLostPackets -= packetsLostInThisBatch;
-    }
-
-    return batchResults;
   }
 
   /**
